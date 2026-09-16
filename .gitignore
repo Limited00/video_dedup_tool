@@ -1,6 +1,7 @@
 # Build artifacts
 build/
 dist/
+release/
 *.spec
 build_log.txt
 __pycache__/
