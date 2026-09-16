@@ -1,0 +1,38 @@
+# Build artifacts
+build/
+dist/
+*.spec
+build_log.txt
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code (local state)
+.claude/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Test outputs
+*_dedup.mp4
+*_dedup_test.mp4
+*_backup_for_test.mp4
+
+# Logs
+*.log
+logs/
+
+# Config (user-specific)
+config.local.json
