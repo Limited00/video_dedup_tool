@@ -4,6 +4,10 @@
 </p>
 
 <p align="center">
+  <b>English</b> | <a href="README.zh-CN.md">简体中文</a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/python-3.9+-blue.svg" alt="Python">
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11-0078d4.svg" alt="Platform">
   <img src="https://img.shields.io/badge/gui-PyQt6-green.svg" alt="GUI">
@@ -46,8 +50,8 @@
 ### Option A: Run from Source
 
 ```bash
-git clone https://github.com/your-username/video-dedup-tool.git
-cd video-dedup-tool
+git clone https://github.com/Limited00/video_dedup_tool.git
+cd video_dedup_tool
 
 pip install -r requirements.txt
 python main.py
@@ -55,7 +59,7 @@ python main.py
 
 ### Option B: Portable EXE
 
-Download `VideoDedupTool.exe` from [Releases](https://github.com/your-username/video-dedup-tool/releases) and run directly — no Python installation needed.
+Download `VideoDedupTool.exe` from [Releases](https://github.com/Limited00/video_dedup_tool/releases) and run directly — no Python installation needed.
 
 ### Optional: GPU Acceleration
 
@@ -213,11 +217,11 @@ The output EXE is located in `dist/VideoDedupTool/`.
 ## 🧪 Testing
 
 ```bash
-# Integration test (no video files needed)
+# Quick integration test (no video files needed; verifies module imports and basic functionality)
 python test_integration.py
 
-# Real-file test (requires sample videos)
-python test_with_videos.py
+# Comprehensive test suite (covers all core modules and new features)
+python test_comprehensive.py
 ```
 
 ## 📄 License
