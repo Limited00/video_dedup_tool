@@ -9,6 +9,7 @@
 """
 
 import os
+import sys
 import json
 import hashlib
 import cv2
@@ -21,8 +22,21 @@ logger = logging.getLogger("VideoDedup.Hasher")
 
 
 def _get_hash_cache_dir() -> str:
-    """返回磁盘哈希缓存目录（LOCALAPPDATA/VideoDedupTool/hash_cache）。"""
-    base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+    """返回磁盘哈希缓存目录。
+
+    优先级：VIDEO_DEDUP_CACHE_DIR（容器挂载卷用）> 平台默认：
+    - Linux/macOS: $XDG_CACHE_HOME 或 ~/.cache
+    - Windows: %LOCALAPPDATA% 或 ~
+    """
+    env = os.environ.get("VIDEO_DEDUP_CACHE_DIR")
+    if env:
+        base = env
+    elif sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+    else:
+        base = os.environ.get("XDG_CACHE_HOME") or os.path.join(
+            os.path.expanduser("~"), ".cache"
+        )
     d = os.path.join(base, "VideoDedupTool", "hash_cache")
     try:
         os.makedirs(d, exist_ok=True)

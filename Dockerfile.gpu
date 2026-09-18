@@ -1,0 +1,39 @@
+# 视频去重工具 - NVIDIA GPU (CUDA 12) 版镜像
+# 前置：宿主机需装 NVIDIA 驱动 + nvidia-container-toolkit
+# 构建: docker build -f Dockerfile.gpu -t videodedup:gpu .
+# 运行: docker run --gpus all --rm -v <数据目录>:/data videodedup:gpu --help
+
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    NVIDIA_VISIBLE_DEVICES=all \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+# Python + FFmpeg + OpenCV headless 所需系统库
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3 \
+        python3-pip \
+        python3-dev \
+        ffmpeg \
+        libglib2.0-0 \
+        libgomp1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/bin/python3 /usr/bin/python
+
+WORKDIR /app
+
+# 先装依赖（利用 Docker 层缓存）；cupy-cuda12x 体积较大，单独一层
+COPY requirements-core.txt ./
+RUN pip install --no-cache-dir -r requirements-core.txt && \
+    pip install --no-cache-dir cupy-cuda12x
+
+# 拷贝源码
+COPY app ./app
+COPY cli.py ./
+
+RUN mkdir -p /data/reference /data/target /data/output /cache
+
+ENTRYPOINT ["python", "cli.py"]
+CMD ["--help"]

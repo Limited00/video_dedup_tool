@@ -1,0 +1,38 @@
+# VCS
+.git
+.gitignore
+
+# Build artifacts
+build/
+dist/
+release/
+*.spec
+build_log.txt
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Virtual env
+venv/
+.venv/
+env/
+
+# IDE / local state
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+
+# Data & outputs (mount into container at runtime instead)
+data/
+logs/
+*.log
+*_dedup.mp4
+
+# Docs / tests (not needed at runtime)
+README.md
+README.zh-CN.md
+LICENSE
+test_*.py

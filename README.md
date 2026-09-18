@@ -9,8 +9,9 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.9+-blue.svg" alt="Python">
-  <img src="https://img.shields.io/badge/platform-Windows%2010%2F11-0078d4.svg" alt="Platform">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Docker-0078d4.svg" alt="Platform">
   <img src="https://img.shields.io/badge/gui-PyQt6-green.svg" alt="GUI">
+  <img src="https://img.shields.io/badge/cli-headless-555555.svg" alt="CLI">
   <img src="https://img.shields.io/badge/license-MIT-yellow.svg" alt="License">
   <img src="https://img.shields.io/badge/GPU-CUDA%20%7C%20CuPy-76b900.svg" alt="GPU">
 </p>
@@ -19,7 +20,7 @@
 
 ## 📖 Overview
 
-**Video Dedup Tool** is a Windows desktop application that detects and removes duplicate video segments by comparing against a reference material library. It uses perceptual hashing (dHash/pHash/aHash) with **numpy-vectorized Hamming distance computation** to achieve near-instant frame matching, and **FFmpeg stream-copy** for lossless cutting without re-encoding.
+**Video Dedup Tool** is a cross-platform application (Windows / Linux / Docker) that detects and removes duplicate video segments by comparing against a reference material library. It uses perceptual hashing (dHash/pHash/aHash) with **numpy-vectorized Hamming distance computation** to achieve near-instant frame matching, and **FFmpeg stream-copy** for lossless cutting without re-encoding. It ships a PyQt6 desktop GUI *and* a headless CLI for servers and containers.
 
 > **Use Case**: You have a library of original video clips (素材库). You want to check if any target videos contain copies of those clips, and automatically remove the duplicated portions.
 
@@ -36,14 +37,18 @@
 | 👁 **Folder Monitor** | Real-time filesystem watching (watchdog + polling fallback), auto-queues new videos |
 | 📊 **Reports** | Export to CSV / JSON / Excel (xlsx) / HTML with per-segment similarity details |
 | 🎨 **Modern UI** | Windows 11 Fluent Design dark theme, drag-and-drop, collapsible panels |
+| 💻 **Headless CLI** | No-GUI command-line mode for Linux servers / containers (`python cli.py`) |
+| 🐳 **Docker** | CPU & NVIDIA-GPU images with FFmpeg baked in (`docker compose up`) |
 | 📦 **Portable EXE** | PyInstaller-packaged standalone executable, no Python required |
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Windows 10 / 11** (64-bit)
-- **FFmpeg** — required for video cutting. [Download here](https://ffmpeg.org/download.html) and ensure `ffmpeg.exe` is in your `PATH`.
+- **Windows 10 / 11** or **Linux** (64-bit)
+- **FFmpeg** — required for video cutting. Ensure `ffmpeg` is in your `PATH`.
+  - Windows: [download here](https://ffmpeg.org/download.html).
+  - Linux: `sudo apt install ffmpeg` (Debian/Ubuntu) or `sudo dnf install ffmpeg` (Fedora).
 - **Python 3.9+** (source install only)
 - **NVIDIA GPU + CuPy** (optional, for GPU acceleration)
 
@@ -57,9 +62,24 @@ pip install -r requirements.txt
 python main.py
 ```
 
-### Option B: Portable EXE
+### Option B: Download Installer
 
-Download `VideoDedupTool.exe` from [Releases](https://github.com/Limited00/video_dedup_tool/releases) and run directly — no Python installation needed.
+Grab a ready-to-run package from [Releases](https://github.com/Limited00/video_dedup_tool/releases) — no Python needed.
+
+| Package | Platform | Notes |
+|---------|----------|-------|
+| `VideoDedupTool-v*-windows-x64-cpu.exe` | Windows x64 | Double-click to run. No GPU required. |
+| `VideoDedupTool-v*-windows-x64-gpu.exe` | Windows x64 | Requires NVIDIA driver (CUDA 12). |
+| `VideoDedupTool-v*-linux-x86_64-cpu.AppImage` | Linux x64 | `chmod +x` then run. |
+| `VideoDedupTool-v*-linux-x86_64-gpu.AppImage` | Linux x64 | Requires NVIDIA driver (CUDA 12). |
+
+```bash
+# Linux: make executable and run
+chmod +x VideoDedupTool-v*-linux-x86_64-cpu.AppImage
+./VideoDedupTool-v*-linux-x86_64-cpu.AppImage
+```
+
+> FFmpeg is still required for the **cutting** feature (detection works out of the box). See [Prerequisites](#prerequisites).
 
 ### Optional: GPU Acceleration
 
@@ -67,6 +87,34 @@ Download `VideoDedupTool.exe` from [Releases](https://github.com/Limited00/video
 pip install cupy-cuda12x    # For RTX 40/50 series (CUDA 12.x)
 pip install cupy-cuda11x    # For RTX 20/30 series (CUDA 11.x)
 ```
+
+### Option C: Docker (headless, CPU or GPU)
+
+Run the headless CLI in a container — no Python or FFmpeg needed on the host.
+
+```bash
+# Build and run (CPU image, FFmpeg included)
+docker build -t videodedup .
+docker run --rm \
+  -v "$PWD/data/reference:/data/reference" \
+  -v "$PWD/data/target:/data/target" \
+  -v "$PWD/data/output:/data/output" \
+  videodedup --reference /data/reference --target /data/target \
+             --output-dir /data/output --format csv,json
+
+# Or via docker compose (CPU)
+docker compose up --build
+
+# GPU image (requires NVIDIA driver + nvidia-container-toolkit)
+docker build -f Dockerfile.gpu -t videodedup:gpu .
+docker run --gpus all --rm -v "$PWD/data:/data" videodedup:gpu \
+  --reference /data/reference --target /data/target
+
+# Or via docker compose (GPU)
+docker compose -f docker-compose.gpu.yml up --build
+```
+
+Place reference clips in `data/reference/` and target videos in `data/target/`; reports land in `data/output/`. Switch `command: ["--auto-cut"]` to `command: ["--watch"]` in `docker-compose.yml` to run as a long-lived folder-watcher service.
 
 ## 📖 Usage Guide
 
@@ -145,14 +193,52 @@ Dropped frames create gaps in sampling; nearby segments are re-merged by the mer
 
 > ⚠️ Trade-off: material clips shorter than `coarse_interval` may fall between coarse samples and be missed, so the gate uses a relaxed threshold (`hash_threshold + 5`) and is **off by default**. Enable it only when most target videos are expected to contain no material.
 
+## 💻 Command-Line Interface (Headless)
+
+The processing engine is fully decoupled from the GUI, so the same pipeline runs headlessly on Linux servers or in containers — no display or PyQt6 required.
+
+```bash
+# One-shot batch: detect & cut across a directory, then export reports
+python cli.py --reference refs/ --target targets/ --output-dir out/ --format csv,json --auto-cut
+
+# Same entry point via main.py
+python main.py --cli --help
+
+# Watch mode: keep watching a directory and process new videos as they arrive
+python cli.py --reference refs/ --target targets/ --watch --watch-interval 5
+
+# Show every option (all detection parameters are exposed as flags)
+python cli.py --help
+```
+
+Configuration can also be supplied via environment variables (handy for `docker compose`):
+
+| Env var | Meaning |
+|---------|---------|
+| `VIDEO_DEDUP_REFERENCE` | Reference paths (multiple separated by `os.pathsep` or comma) |
+| `VIDEO_DEDUP_TARGET` | Target paths |
+| `VIDEO_DEDUP_OUTPUT_DIR` | Report/output directory |
+| `VIDEO_DEDUP_CONFIG` | Path to a JSON config (exported `AppConfig`) |
+| `VIDEO_DEDUP_AUTO_CUT` | `1`/`true`/`yes` enables auto-cut |
+| `VIDEO_DEDUP_FORMAT` | Report formats (comma-separated: `csv,json,html,xlsx`) |
+
+> The CLI and Docker images use `opencv-python-headless` (see `requirements-core.txt`). Don't install `opencv-python` and `opencv-python-headless` into the same environment — they provide the same `cv2` module.
+
 ## 🏗️ Architecture
 
 ```
 video_dedup_tool/
-├── main.py                  # Application entry point
-├── build.py                 # PyInstaller packaging script
-├── requirements.txt         # Python dependencies
+├── main.py                  # GUI entry point (also dispatches `--cli`)
+├── cli.py                   # Headless CLI entry point (Linux / Docker)
+├── build.py                 # PyInstaller packaging script (Windows EXE)
+├── requirements.txt         # GUI dependencies (PyQt6 + opencv-python)
+├── requirements-core.txt    # Headless dependencies (opencv-python-headless, no Qt)
+├── Dockerfile               # CPU container image (FFmpeg included)
+├── Dockerfile.gpu           # NVIDIA/CUDA container image
+├── docker-compose.yml       # CPU compose
+├── docker-compose.gpu.yml   # GPU compose
 └── app/
+    ├── cli.py               # Headless command-line implementation
     ├── main_window.py       # GUI (PyQt6, ~1400 lines)
     ├── hasher.py            # Perceptual hashing (dHash/pHash/aHash) + grab/retrieve frame skipping
     ├── detector.py          # Numpy-vectorized duplicate detection (uint64 popcount matrix)
@@ -162,7 +248,7 @@ video_dedup_tool/
     ├── watcher.py           # Folder monitoring (watchdog + polling)
     ├── workers.py           # QThread workers for async GUI operation
     ├── report.py            # CSV / JSON / Excel / HTML report export
-    ├── config.py            # JSON-based persistent settings (%APPDATA%)
+    ├── config.py            # JSON-based persistent settings (XDG / %APPDATA%)
     ├── logger.py            # Dual-channel logging (file + in-memory for GUI)
     └── styles.py            # Windows 11 dark/light QSS theme
 ```
@@ -214,6 +300,17 @@ python build.py --clean
 
 The output EXE is located in `dist/VideoDedupTool/`.
 
+### Release a New Version
+
+Pushing a `v*` tag triggers a GitHub Actions workflow that builds and publishes the installers for both platforms automatically:
+
+```bash
+git tag v1.0.0
+git push origin --tags
+```
+
+The resulting packages (Windows EXE + Linux AppImage, CPU and GPU variants) are uploaded to [Releases](https://github.com/Limited00/video_dedup_tool/releases).
+
 ## 🧪 Testing
 
 ```bash
@@ -222,6 +319,9 @@ python test_integration.py
 
 # Comprehensive test suite (covers all core modules and new features)
 python test_comprehensive.py
+
+# Headless CLI smoke test (verifies app.cli loads without PyQt6, path/param helpers)
+python test_cli.py
 ```
 
 ## 📄 License
@@ -233,5 +333,5 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 ---
 
 <p align="center">
-  <sub>Built with Python · PyQt6 · OpenCV · NumPy · FFmpeg · CuPy</sub>
+  <sub>Built with Python · PyQt6 · OpenCV · NumPy · FFmpeg · CuPy · Docker</sub>
 </p>

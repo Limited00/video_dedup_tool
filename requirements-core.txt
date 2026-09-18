@@ -1,0 +1,6 @@
+# 无头 / 容器部署依赖（不含 PyQt6 / Pillow）
+# 注意：opencv-python-headless 与 opencv-python 二选一，勿同装。
+opencv-python-headless>=4.8.0
+numpy>=1.24.0
+watchdog>=3.0.0
+openpyxl>=3.1.0

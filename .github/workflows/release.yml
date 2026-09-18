@@ -1,0 +1,91 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            os: windows-latest
+            variant: cpu
+          - platform: windows
+            os: windows-latest
+            variant: gpu
+          - platform: linux
+            os: ubuntu-latest
+            variant: cpu
+          - platform: linux
+            os: ubuntu-latest
+            variant: gpu
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system deps (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libgl1
+
+      - name: Install Python dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+          if [ "${{ matrix.variant }}" = "gpu" ]; then
+            pip install cupy-cuda12x
+          fi
+
+      - name: Build single-file EXE (Windows)
+        if: matrix.platform == 'windows'
+        shell: bash
+        run: python build.py --onefile --${{ matrix.variant }}
+
+      - name: Build AppImage (Linux)
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: bash build_appimage.sh ${{ matrix.variant }} "${GITHUB_REF_NAME#v}"
+
+      - name: Rename Windows artifact
+        if: matrix.platform == 'windows'
+        shell: bash
+        run: mv dist/VideoDedupTool.exe "VideoDedupTool-v${GITHUB_REF_NAME#v}-windows-x64-${{ matrix.variant }}.exe"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VideoDedupTool-${{ matrix.platform }}-${{ matrix.variant }}
+          path: VideoDedupTool-v*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -lh artifacts
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: artifacts/*

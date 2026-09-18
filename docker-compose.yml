@@ -1,0 +1,26 @@
+# 视频去重工具 - CPU 编排
+# 用法:
+#   docker compose up --build          # 批处理一次（依据下方 command）
+#   docker compose run --rm videodedup --watch    # 常驻监控
+# 数据目录: 把素材放入 ./data/reference，目标视频放入 ./data/target，
+#           结果与报告输出到 ./data/output。
+
+services:
+  videodedup:
+    build: .
+    image: videodedup:latest
+    environment:
+      VIDEO_DEDUP_REFERENCE: /data/reference
+      VIDEO_DEDUP_TARGET: /data/target
+      VIDEO_DEDUP_OUTPUT_DIR: /data/output
+      VIDEO_DEDUP_FORMAT: csv,json,html
+      VIDEO_DEDUP_CACHE_DIR: /cache
+    volumes:
+      - ./data/reference:/data/reference
+      - ./data/target:/data/target
+      - ./data/output:/data/output
+      - ./data/cache:/cache
+    # 默认：批处理一次（环境变量已提供输入/输出）。
+    # 取消注释下面的行可切换为常驻监控 / 自动裁切：
+    # command: ["--watch"]
+    command: ["--auto-cut"]

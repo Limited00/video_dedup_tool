@@ -13,12 +13,21 @@ from typing import Optional
 
 
 def get_app_data_dir() -> Path:
-    """获取应用数据目录 (Windows: %APPDATA%/VideoDedupTool)"""
-    if sys.platform == "win32":
+    """获取应用数据目录。
+
+    优先级：VIDEO_DEDUP_CONFIG_DIR（容器持久化配置用）> 平台默认：
+    - Windows: %APPDATA%/VideoDedupTool
+    - Linux/macOS: $XDG_CONFIG_HOME 或 ~/.config/VideoDedupTool
+    """
+    env = os.environ.get("VIDEO_DEDUP_CONFIG_DIR")
+    if env:
+        app_dir = Path(env)
+    elif sys.platform == "win32":
         base = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+        app_dir = base / "VideoDedupTool"
     else:
-        base = Path.home() / ".config"
-    app_dir = base / "VideoDedupTool"
+        base = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+        app_dir = base / "VideoDedupTool"
     app_dir.mkdir(parents=True, exist_ok=True)
     return app_dir
 

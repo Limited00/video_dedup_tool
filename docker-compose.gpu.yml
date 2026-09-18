@@ -1,0 +1,31 @@
+# 视频去重工具 - NVIDIA GPU 编排
+# 前置：宿主机需装 NVIDIA 驱动 + nvidia-container-toolkit
+# 用法:
+#   docker compose -f docker-compose.gpu.yml up --build
+
+services:
+  videodedup:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    image: videodedup:gpu
+    environment:
+      VIDEO_DEDUP_REFERENCE: /data/reference
+      VIDEO_DEDUP_TARGET: /data/target
+      VIDEO_DEDUP_OUTPUT_DIR: /data/output
+      VIDEO_DEDUP_FORMAT: csv,json,html
+      VIDEO_DEDUP_CACHE_DIR: /cache
+      NVIDIA_VISIBLE_DEVICES: all
+    volumes:
+      - ./data/reference:/data/reference
+      - ./data/target:/data/target
+      - ./data/output:/data/output
+      - ./data/cache:/cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command: ["--auto-cut"]
